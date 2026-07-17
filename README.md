@@ -3,8 +3,48 @@
 **Real-time synchronized music listening for groups and couples.** Everyone in a room hears the exact same moment of a song — playback stays locked in sync across every listener, with live chat, voting, reactions, and admin-controlled playback on top.
 
 [![Docker](https://img.shields.io/badge/Container-Docker-2496ED?logo=docker&logoColor=white)](Dockerfile)
-[![Deploy Targets](https://img.shields.io/badge/Deploy-Vercel%20%7C%20Azure%20%7C%20GitHub%20Pages-black)](#deployment-options)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](tsconfig.app.json)
+## Deployment (Azure)
+
+This is a static frontend, so Azure offers a few ways to run it — from fully managed to fully manual:
+
+| Path | Setup | What it demonstrates |
+|---|---|---|
+| **Azure Static Web Apps** | Create resource in Azure Portal, connect this GitHub repo, set build output to `dist` | Managed static hosting, free HTTPS, GitHub Actions CI built in automatically |
+| **Azure VM + Docker** | Build the image on the VM, `docker run -d -p 80:4173`, open port 80 in the NSG | Manual Linux ops, container lifecycle, networking configuration |
+| **Azure Kubernetes Service (AKS)** | Push image to Azure Container Registry, `kubectl apply` a Deployment + Service | Pod scheduling, self-healing, rolling updates, autoscaling |
+
+### Azure Static Web Apps — quick steps
+1. Azure Portal → **Create a resource** → **Static Web App**
+2. Connect it to this GitHub repo, branch `main`
+3. Build details: App location `/`, Output location `dist`
+4. Azure auto-generates a GitHub Actions workflow and deploys automatically on every push to `main`
+5. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub repo secrets, referenced in that workflow's build step
+
+### Azure VM + Docker — quick steps
+```bash
+docker build \
+  --build-arg VITE_SUPABASE_URL=your_supabase_url \
+  --build-arg VITE_SUPABASE_ANON_KEY=your_anon_key \
+  -t syncbeat .
+
+docker run -d --name syncbeat --restart unless-stopped -p 80:4173 syncbeat
+```
+Open port 80 in the VM's Network Security Group, then visit `http://<vm-public-ip>`.
+
+### Azure Kubernetes Service (AKS) — quick steps
+```bash
+az acr create --resource-group syncbeat-rg --name <acrname> --sku Basic
+az acr login --name <acrname>
+docker build --build-arg VITE_SUPABASE_URL=... --build-arg VITE_SUPABASE_ANON_KEY=... -t <acrname>.azurecr.io/syncbeat:v1 .
+docker push <acrname>.azurecr.io/syncbeat:v1
+
+az aks create --resource-group syncbeat-rg --name syncbeat-aks --node-count 2 --attach-acr <acrname> --generate-ssh-keys
+az aks get-credentials --resource-group syncbeat-rg --name syncbeat-aks
+
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl get svc syncbeat-svc     # wait for EXTERNAL-IP
+```
 
 **Live demo:** _add your deployed URL here_
 
