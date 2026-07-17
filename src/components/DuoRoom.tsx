@@ -95,7 +95,7 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
 <div className="text-center pt-5 pb-1 px-4 animate-fade-in">
   <p className="font-display italic text-[13px] sm:text-sm text-duo-200/70 tracking-wide">
     <span className="text-duo-400/80">❈</span>
-    <span className="mx-2">This little corner of the internet is dedicated to you, Pooja</span>
+    <span className="mx-2">This little corner of the internet is dedicated to you, Poojaaa</span>
     <span className="text-duo-400/80">❈</span>
   </p>
 </div>
