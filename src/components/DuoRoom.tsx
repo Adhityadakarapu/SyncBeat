@@ -91,7 +91,14 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
       <div className="min-h-screen bg-gradient-to-br from-duo-950 via-[#1a0a10] to-black text-white relative">
         <FloatingHearts channelId={roomId} />
         <RoomHeader room={room} members={members} accent="duo" />
-
+{/* A quiet dedication — Duo only */}
+<div className="text-center pt-5 pb-1 px-4 animate-fade-in">
+  <p className="font-display italic text-[13px] sm:text-sm text-duo-200/70 tracking-wide">
+    <span className="text-duo-400/80">❈</span>
+    <span className="mx-2">This little corner of the internet is dedicated to you, Pooja</span>
+    <span className="text-duo-400/80">❈</span>
+  </p>
+</div>
         {/* Waiting banner */}
         {waiting && (
           <div className="max-w-2xl mx-auto px-4 pt-6">
