@@ -80,6 +80,9 @@ export interface RoomState {
   position_ms: number;
   updated_at: string;
   created_at: string;
+  skip_votes: Record<string, boolean>;
+  skip_target: string | null;
+  theme: string;
   tracks: Track[];
   messages: Message[];
   memories: TrackMemory[];

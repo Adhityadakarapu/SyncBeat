@@ -11,7 +11,7 @@ interface Heart {
 const EMOJIS = ['❤️', '💕', '💖', '💗', '🌹', '✨', '😘', '💝'];
 let counter = 0;
 
-export function FloatingHearts({ channelId }: { channelId: string }) {
+export function FloatingHearts({ channelId, showName = false }: { channelId: string; showName?: boolean }) {
   const [hearts, setHearts] = useState<Heart[]>([]);
   const seen = useRef<Set<string>>(new Set());
 
@@ -39,10 +39,15 @@ export function FloatingHearts({ channelId }: { channelId: string }) {
       {hearts.map((h) => (
         <span
           key={h.id}
-          className="absolute bottom-24 text-3xl animate-heart-rise"
+          className="absolute bottom-24 flex flex-col items-center animate-heart-rise"
           style={{ left: `${h.x}%` }}
         >
-          {h.emoji}
+          <span className="text-3xl">{h.emoji}</span>
+          {showName && (
+            <span className="text-[9px] text-white/70 bg-black/40 rounded-full px-1.5 py-0.5 mt-0.5 whitespace-nowrap">
+              {h.fromName}
+            </span>
+          )}
         </span>
       ))}
     </div>

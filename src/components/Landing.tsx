@@ -5,12 +5,13 @@ import type { Portal } from '../lib/types';
 
 interface LandingProps {
   onEnter: (params: { roomId: string; code: string; portal: Portal; myName: string }) => void;
+  myName: string;
+  onSignOut: () => void;
 }
 
-export function Landing({ onEnter }: LandingProps) {
+export function Landing({ onEnter, myName, onSignOut }: LandingProps) {
   const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
   const [portal, setPortal] = useState<Portal | null>(null);
-  const [name, setName] = useState('');
   const [roomName, setRoomName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -20,17 +21,17 @@ export function Landing({ onEnter }: LandingProps) {
 
   const createRoom = async () => {
     setErr(null);
-    if (!portal || !name.trim()) { setErr('Enter your name.'); return; }
+    if (!portal) return;
     setBusy(true);
-    const { data, error } = await api.createRoom(portal, name.trim(), roomName.trim() || undefined);
+    const { data, error } = await api.createRoom(portal, myName, roomName.trim() || undefined);
     setBusy(false);
     if (error || !data) { setErr(error ?? 'Failed to create room'); return; }
-    onEnter({ roomId: data.id, code: data.code, portal: data.portal, myName: name.trim() });
+    onEnter({ roomId: data.id, code: data.code, portal: data.portal, myName });
   };
 
   const joinRoom = async () => {
     setErr(null);
-    if (!name.trim() || !joinCode.trim()) { setErr('Enter your name and a room code.'); return; }
+    if (!joinCode.trim()) { setErr('Enter a room code.'); return; }
     const code = joinCode.trim().toUpperCase();
     setBusy(true);
     // look up the room by code via get_room_state needs an id; we don't have it.
@@ -42,7 +43,7 @@ export function Landing({ onEnter }: LandingProps) {
     const res = await resolveRoomId(code);
     setBusy(false);
     if (!res) { setErr('Room not found. Check the code.'); return; }
-    onEnter({ roomId: res.id, code, portal: res.portal, myName: name.trim() });
+    onEnter({ roomId: res.id, code, portal: res.portal, myName });
   };
 
   return (
@@ -60,7 +61,10 @@ export function Landing({ onEnter }: LandingProps) {
             <Logo />
             <span className="font-display font-extrabold text-xl">SyncBeat</span>
           </div>
-          <a href="https://github.com" target="_blank" rel="noreferrer" className="text-sm text-white/50 hover:text-white/80 transition-colors">How it works</a>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-white/50">Signed in as <span className="text-white/80 font-medium">{myName}</span></span>
+            <button onClick={onSignOut} className="text-sm text-white/50 hover:text-white/80 transition-colors">Sign out</button>
+          </div>
         </nav>
 
         {/* hero */}
@@ -102,14 +106,11 @@ export function Landing({ onEnter }: LandingProps) {
         {/* create form */}
         {mode === 'create' && portal && (
           <FormCard title={`Create a ${portal === 'teams' ? 'Teams' : 'Duo'} room`} accent={portal} onBack={reset}>
-            <Field label="Your name">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex" maxLength={24} className={inputCls()} />
-            </Field>
             <Field label="Room name (optional)">
               <input value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder={portal === 'teams' ? 'Friday night session' : 'Our room'} maxLength={40} className={inputCls()} />
             </Field>
             <div className="flex gap-2">
-              <button onClick={createRoom} disabled={busy || !name.trim()} className={btnCls(portal)}>{busy ? 'Creating…' : 'Create room'}</button>
+              <button onClick={createRoom} disabled={busy} className={btnCls(portal)}>{busy ? 'Creating…' : 'Create room'}</button>
               <JoinInsteadLink onClick={() => setMode('join')} />
             </div>
           </FormCard>
@@ -118,14 +119,11 @@ export function Landing({ onEnter }: LandingProps) {
         {/* join form */}
         {mode === 'join' && (
           <FormCard title="Join a room" accent={portal ?? 'teams'} onBack={reset}>
-            <Field label="Your name">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Alex" maxLength={24} className={inputCls()} />
-            </Field>
             <Field label="Room code">
               <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase().slice(0, 6))} placeholder="ABC123" maxLength={6} className={`font-mono tracking-[0.3em] text-center uppercase ${inputCls()}`} />
             </Field>
             <div className="flex gap-2">
-              <button onClick={joinRoom} disabled={busy || !name.trim() || joinCode.length < 6} className={btnCls(portal ?? 'teams')}>{busy ? 'Joining…' : 'Join room'}</button>
+              <button onClick={joinRoom} disabled={busy || joinCode.length < 6} className={btnCls(portal ?? 'teams')}>{busy ? 'Joining…' : 'Join room'}</button>
             </div>
           </FormCard>
         )}

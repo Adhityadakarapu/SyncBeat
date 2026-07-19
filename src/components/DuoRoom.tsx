@@ -5,22 +5,26 @@ import { Player } from './Player';
 import { Chat } from './Chat';
 import { Members } from './Members';
 import { AddTrack } from './AddTrack';
+import { SavedSongs } from './SavedSongs';
 import { FloatingHearts, sendHeart } from './FloatingHearts';
 import { CountdownPanel } from './CountdownPanel';
-import { LoveNotesBoard, OurSongs, ScheduledSurprises } from './DuoFeatures';
-import { RoomShell, RoomHeader, Panel, LoadingScreen, ErrorScreen } from './TeamsRoom';
+import { ScheduledSurprises } from './DuoFeatures';
+import { RoomShell, RoomHeader, Panel, LoadingScreen, ErrorScreen, copyToClipboard } from './TeamsRoom';
+import { getThemeDef } from '../lib/themes';
+import { startAmbient, stopAmbient } from '../lib/ambient';
 import type { ScheduledMessage } from '../lib/types';
 import { useRoomPage } from '../hooks/useRoomPage';
 
 const DUO_CAP = 2;
-type DuoTab = 'songs' | 'notes' | 'surprise' | 'countdown' | 'add';
+type DuoTab = 'surprise' | 'countdown' | 'saved' | 'add';
 
-export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string; myName: string }) {
+export function DuoRoom({ roomId, code, myName, onLogoClick }: { roomId: string; code: string; myName: string; onLogoClick?: () => void }) {
   const { room, members, sync, loading, error, channel, sendSync, denied, notifyChange, isHost } = useSyncEngine({
     roomId, code, myName, capacity: DUO_CAP,
   });
-  const [tab, setTab] = useState<DuoTab>('songs');
+  const [tab, setTab] = useState<DuoTab>('saved');
   const [reveal, setReveal] = useState<ScheduledMessage | null>(null);
+  const [ambientOn, setAmbientOn] = useState(false);
   const shownReveals = useRef<Set<string>>(new Set());
   useRoomPage();
 
@@ -35,6 +39,19 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
     const next = room.tracks.find((t) => t.status === 'queue');
     if (next) sendSync('track', 0, next.id);
   }, [sync.currentTrackId, room, sendSync]);
+
+  // synthesized ambient pad, matching the room's current theme — local to
+  // this listener only, not synced (each partner can mute it for themselves)
+  useEffect(() => {
+    if (!ambientOn || !room) {
+      stopAmbient();
+      return;
+    }
+    startAmbient(room.theme ?? 'classic');
+    return () => stopAmbient();
+    // Intentionally depends on room.theme only — see TeamsRoom for why.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ambientOn, room?.theme]);
 
   // scheduled surprise delivery checker — each tab tracks which reveals it has
   // already shown itself, independent of the shared `delivered` flag. Using
@@ -67,8 +84,8 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
   const onPlayStateRequest = (playing: boolean) => sendSync(playing ? 'play' : 'pause', currentTrack ? livePos() : 0);
   const onSeekRequest = (ms: number) => sendSync('seek', ms);
   const onEnded = () => sendSync('track', 0, null);
-  const onPlayTrack = (id: string) => sendSync('track', 0, id);
   const onTransferHost = async (name: string) => { await api.transferHost(roomId, code, name); notifyChange(); };
+  const onThemeChange = async (theme: string) => { await api.setRoomTheme(roomId, code, myName, theme); notifyChange(); };
 
   function livePos(): number {
     if (currentTrack?.source === 'audio') {
@@ -79,42 +96,29 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
   }
 
   const tabs: { id: DuoTab; label: string }[] = [
-    { id: 'songs', label: 'Our Songs' },
-    { id: 'notes', label: 'Love Notes' },
+    { id: 'saved', label: 'Saved Songs' },
     { id: 'surprise', label: 'Surprise' },
     { id: 'countdown', label: 'Countdown' },
     { id: 'add', label: 'Add Track' },
   ];
 
+  const themeDef = getThemeDef(room.theme);
+
   return (
     <RoomShell>
-      <div className="min-h-screen bg-gradient-to-br from-duo-950 via-[#1a0a10] to-black text-white relative">
+      <div
+        className={`min-h-screen text-white relative ${themeDef.gradient ? '' : 'bg-gradient-to-br from-duo-950 via-[#1a0a10] to-black'}`}
+        style={themeDef.gradient ? { background: themeDef.gradient } : undefined}
+      >
         <FloatingHearts channelId={roomId} />
-        <RoomHeader room={room} members={members} accent="duo" />
-{/* A quiet dedication — Duo only */}
-<div className="text-center pt-5 pb-1 px-4 animate-fade-in">
-  <p className="font-display italic text-[13px] sm:text-sm text-duo-200/70 tracking-wide">
-    <span className="text-duo-400/80">❈</span>
-    <span className="mx-2">This little corner of the internet is dedicated to you, Poojaaa</span>
-    <span className="text-duo-400/80">❈</span>
-  </p>
-</div>
+        <RoomHeader
+          room={room} members={members} accent="duo" onLogoClick={onLogoClick}
+          isHost={isHost} onThemeChange={onThemeChange}
+          ambientOn={ambientOn} onToggleAmbient={() => setAmbientOn((v) => !v)}
+        />
+
         {/* Waiting banner */}
-        {waiting && (
-          <div className="max-w-2xl mx-auto px-4 pt-6">
-            <div className="rounded-2xl bg-duo-900/30 border border-duo-700/30 px-5 py-4 flex items-center gap-4 animate-fade-in">
-              <div className="relative w-12 h-12 shrink-0">
-                <span className="absolute inset-0 rounded-full bg-duo-500/30 animate-pulse_slow" />
-                <span className="absolute inset-1.5 rounded-full bg-duo-500/50 animate-pulse_slow" style={{ animationDelay: '0.3s' }} />
-                <span className="absolute inset-3 rounded-full bg-duo-400 flex items-center justify-center text-lg">❤</span>
-              </div>
-              <div>
-                <p className="text-duo-100 font-semibold">Waiting for your partner…</p>
-                <p className="text-duo-200/60 text-xs mt-0.5">Share the code <button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/#/r/duo/${room.code}`)} className="font-mono text-gold-300 underline">{room.code}</button> with the one you love.</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {waiting && <WaitingBanner code={room.code} />}
 
         <div className="max-w-2xl mx-auto px-4 pb-24 pt-6 space-y-4">
           {/* Player */}
@@ -159,8 +163,7 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
               ))}
             </div>
             <div className="p-4">
-              {tab === 'songs' && <OurSongs roomId={roomId} code={code} myName={myName} memories={room.memories} tracks={room.tracks} onPlayTrack={onPlayTrack} onChanged={notifyChange} />}
-              {tab === 'notes' && <LoveNotesBoard roomId={roomId} code={code} myName={myName} notes={room.love_notes} onChanged={notifyChange} />}
+              {tab === 'saved' && <SavedSongs roomId={roomId} code={code} myName={myName} portal="duo" onAdded={notifyChange} />}
               {tab === 'surprise' && <ScheduledSurprises roomId={roomId} code={code} myName={myName} scheduled={room.scheduled} onChanged={notifyChange} />}
               {tab === 'countdown' && <CountdownPanel roomId={roomId} code={code} countdowns={room.countdowns} onChanged={notifyChange} />}
               {tab === 'add' && <AddTrack roomId={roomId} code={code} myName={myName} portal="duo" onAdded={notifyChange} />}
@@ -177,6 +180,38 @@ export function DuoRoom({ roomId, code, myName }: { roomId: string; code: string
         {reveal && <SurpriseReveal surprise={reveal} onClose={() => setReveal(null)} />}
       </div>
     </RoomShell>
+  );
+}
+
+function WaitingBanner({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const ok = await copyToClipboard(`${window.location.origin}/#/r/duo/${code}`);
+    setCopied(ok);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 pt-6">
+      <div className="rounded-2xl bg-duo-900/30 border border-duo-700/30 px-5 py-4 flex items-center gap-4 animate-fade-in">
+        <div className="relative w-12 h-12 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-duo-500/30 animate-pulse_slow" />
+          <span className="absolute inset-1.5 rounded-full bg-duo-500/50 animate-pulse_slow" style={{ animationDelay: '0.3s' }} />
+          <span className="absolute inset-3 rounded-full bg-duo-400 flex items-center justify-center text-lg">❤</span>
+        </div>
+        <div>
+          <p className="text-duo-100 font-semibold">Waiting for your partner…</p>
+          <p className="text-duo-200/60 text-xs mt-0.5">
+            Share the code{' '}
+            <button onClick={handleCopy} className="font-mono text-gold-300 underline">
+              {copied ? 'Copied ✓' : code}
+            </button>{' '}
+            with the one you love.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 

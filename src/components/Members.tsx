@@ -35,7 +35,7 @@ export function Members({ members, hostName, djs, myName, accent, onToggleDj, on
               <div className="flex items-center gap-1.5">
                 <span className="text-sm text-white truncate">{m.name}</span>
                 {isRoomHost && (
-                  <span className="text-[9px] uppercase tracking-wider bg-gold-500/30 text-gold-200 px-1.5 py-0.5 rounded-full font-bold">Host</span>
+                  <span className="text-[9px] uppercase tracking-wider bg-gold-500/30 text-gold-200 px-1.5 py-0.5 rounded-full font-bold">DJ</span>
                 )}
                 {isDJ && (
                   <span className={`text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold ${accent === 'teams' ? 'bg-teams-500/30 text-teams-200' : 'bg-duo-500/30 text-duo-200'}`}>DJ</span>
@@ -47,13 +47,13 @@ export function Members({ members, hostName, djs, myName, accent, onToggleDj, on
               {onTransferHost && isHost && m.name !== hostName && (
                 <button
                   onClick={() => {
-                    if (window.confirm(`Make ${m.name} the admin? You'll lose playback control.`)) {
+                    if (window.confirm(`Make ${m.name} the DJ? You'll lose playback control.`)) {
                       onTransferHost(m.name);
                     }
                   }}
                   className="text-[10px] px-2 py-1 rounded-md bg-gold-600/80 hover:bg-gold-500 text-white"
                 >
-                  Make admin
+                  Transfer DJ
                 </button>
               )}
               {onToggleDj && isHost && m.name !== hostName && (

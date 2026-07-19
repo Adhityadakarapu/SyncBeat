@@ -97,6 +97,18 @@ export const api = {
     return rpc('transfer_host', { p_room_id: roomId, p_code: code, p_new_host: newHost });
   },
 
+  async castSkipVote(
+    roomId: string, code: string, trackId: string, voter: string, memberCount: number,
+  ): Promise<RpcResult<{ skipped: boolean; by?: 'dj' | 'majority'; skip_votes: Record<string, boolean>; votes: number; needed: number; member_count: number }>> {
+    return rpc('cast_skip_vote', {
+      p_room_id: roomId, p_code: code, p_track_id: trackId, p_voter: voter, p_member_count: memberCount,
+    });
+  },
+
+  async setRoomTheme(roomId: string, code: string, actor: string, theme: string): Promise<RpcResult<{ theme: string }>> {
+    return rpc('set_room_theme', { p_room_id: roomId, p_code: code, p_actor: actor, p_theme: theme });
+  },
+
   async getCatalog(): Promise<{ data: CatalogEntry[] | null; error: string | null }> {
     const { data, error } = await supabase
       .from('song_catalog')

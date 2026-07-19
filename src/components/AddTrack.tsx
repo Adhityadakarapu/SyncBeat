@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, type CatalogEntry } from '../lib/api';
+import { useState } from 'react';
+import { api } from '../lib/api';
 import { deriveTitle, LANGUAGE_TAGS, MOOD_TAGS, parseTrackInput } from '../lib/utils';
 import type { Portal } from '../lib/types';
 
@@ -18,36 +18,8 @@ export function AddTrack({ roomId, code, myName, portal, onAdded }: AddTrackProp
   const [lang, setLang] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
-  const [catalogFilter, setCatalogFilter] = useState<string>('Telugu');
-  const [addingId, setAddingId] = useState<string | null>(null);
 
   const accent = portal === 'teams' ? 'teams' : 'duo';
-
-  useEffect(() => {
-    api.getCatalog().then(({ data }) => {
-      if (data) setCatalog(data);
-    });
-  }, []);
-
-  const filteredCatalog = catalog.filter(
-    (c) => !catalogFilter || c.language_tags.includes(catalogFilter) || c.mood_tags.includes(catalogFilter),
-  );
-
-  const quickAdd = async (entry: CatalogEntry) => {
-    setAddingId(entry.id);
-    setErr(null);
-    const { error } = await api.addTrack(
-      roomId, code, `https://www.youtube.com/watch?v=${entry.youtube_id}`, entry.title, myName,
-      'youtube', entry.youtube_id, entry.mood_tags, entry.language_tags,
-    );
-    setAddingId(null);
-    if (error) {
-      setErr(error);
-      return;
-    }
-    onAdded?.();
-  };
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) => {
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -90,45 +62,6 @@ export function AddTrack({ roomId, code, myName, portal, onAdded }: AddTrackProp
 
   return (
     <div className="space-y-3">
-      {catalog.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs text-white/60">Quick add — click a song</p>
-            <select
-              value={catalogFilter}
-              onChange={(e) => setCatalogFilter(e.target.value)}
-              className="text-[11px] bg-white/5 border border-white/15 rounded-md px-1.5 py-1 text-white/70"
-            >
-              <option value="">All</option>
-              {[...LANGUAGE_TAGS, ...MOOD_TAGS].map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          <div className="max-h-40 overflow-y-auto space-y-1 rounded-lg border border-white/10 p-1.5 bg-white/[0.02]">
-            {filteredCatalog.length === 0 && (
-              <p className="text-xs text-white/30 italic px-1.5 py-1">No songs in this category yet — add one below and it'll be saved here for next time.</p>
-            )}
-            {filteredCatalog.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => quickAdd(c)}
-                disabled={addingId === c.id}
-                className="w-full flex items-center justify-between gap-2 text-left px-2.5 py-1.5 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50"
-              >
-                <span className="min-w-0">
-                  <span className="text-sm text-white truncate block">{c.title}</span>
-                  {c.artist && <span className="text-[11px] text-white/40 truncate block">{c.artist}</span>}
-                </span>
-                <span className="text-[10px] text-white/40 shrink-0">{addingId === c.id ? 'Adding…' : '+ Add'}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <div className="border-t border-white/10 pt-3">
-        <p className="text-xs text-white/50 mb-2">Or paste a new link (it'll be added to the quick list above too)</p>
-      </div>
       <div>
         <label className="text-xs text-white/60 mb-1 block">Track URL or YouTube ID</label>
         <input

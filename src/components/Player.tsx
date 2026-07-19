@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { loadYouTubeApi, waitForPlayerReady } from '../lib/youtube';
 import { calcPositionMs, formatTime } from '../lib/utils';
+import { AudioBars, DecorativeBars } from './Visualizer';
 import type { SyncState, Track } from '../lib/types';
 
 interface PlayerProps {
@@ -241,7 +242,7 @@ export function Player({ sync, currentTrack, onPlayStateRequest, onSeekRequest, 
         {currentTrack.source === 'audio' ? (
           <div className="aspect-video w-full bg-gradient-to-br from-black/40 to-black/10 flex items-center justify-center">
             <audio ref={audioRef} src={currentTrack.url} preload="auto" className="hidden" crossOrigin="anonymous" />
-            <AnimatedWaves playing={sync.isPlaying} />
+            <AudioBars audioRef={audioRef} playing={sync.isPlaying} />
           </div>
         ) : (
           <div className="aspect-video w-full bg-black relative">
@@ -254,6 +255,11 @@ export function Player({ sync, currentTrack, onPlayStateRequest, onSeekRequest, 
           </div>
         )}
       </div>
+      {currentTrack.source === 'youtube' && (
+        <div className="px-3 py-1.5 bg-black/30 border-t border-white/5">
+          <DecorativeBars playing={sync.isPlaying} />
+        </div>
+      )}
 
       {/* controls */}
       <div className="p-3 sm:p-4">
@@ -263,7 +269,7 @@ export function Player({ sync, currentTrack, onPlayStateRequest, onSeekRequest, 
             disabled={!canControl}
             className={`w-11 h-11 rounded-full bg-white text-black flex items-center justify-center transition-transform focus-visible:ring-white shrink-0 ${canControl ? 'hover:scale-105' : 'opacity-40 cursor-not-allowed'}`}
             aria-label={sync.isPlaying ? 'Pause' : 'Play'}
-            title={canControl ? undefined : 'Only the admin can control playback'}
+            title={canControl ? undefined : 'Only the DJ can control playback'}
           >
             {sync.isPlaying ? <PauseIcon /> : <PlayIcon />}
           </button>
@@ -271,7 +277,7 @@ export function Player({ sync, currentTrack, onPlayStateRequest, onSeekRequest, 
             <p className="text-sm font-semibold text-white truncate">{currentTrack.title}</p>
             <p className="text-xs text-white/50 truncate">
               added by {currentTrack.added_by}
-              {!canControl && <span className="text-white/30"> · admin controls playback</span>}
+              {!canControl && <span className="text-white/30"> · DJ controls playback</span>}
             </p>
           </div>
         </div>
@@ -299,25 +305,6 @@ export function Player({ sync, currentTrack, onPlayStateRequest, onSeekRequest, 
           <span className="text-[11px] tabular-nums text-white/50 w-10">{formatTime(dur)}</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-function AnimatedWaves({ playing }: { playing: boolean }) {
-  const bars = [0, 1, 2, 3, 4, 5, 6];
-  return (
-    <div className="flex items-end gap-1.5 h-16" aria-hidden="true">
-      {bars.map((i) => (
-        <span
-          key={i}
-          className="w-1.5 rounded-full bg-white/70"
-          style={{
-            height: playing ? `${20 + (i % 3) * 18}%` : '20%',
-            transition: 'height 0.3s ease',
-            animation: playing ? `pulse-slow ${0.8 + i * 0.12}s ease-in-out infinite` : 'none',
-          }}
-        />
-      ))}
     </div>
   );
 }
